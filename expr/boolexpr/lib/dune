@@ -1,0 +1,4 @@
+(library
+ (name boolexprLib))
+(menhir (modules parser))
+(ocamllex lexer)

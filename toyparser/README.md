@@ -8,6 +8,7 @@ Then, run the following commands from the `lip/toyparser` directory:
 ```
 echo '(using menhir 2.1)' >> dune-project
 echo -e '(menhir (modules parser))\n(ocamllex lexer)' >> lib/dune
+
 ```
 These commands extend the dune configuration files,
 to instruct the compiler to use the ocamllex and the Menhir tools.
