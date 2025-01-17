@@ -6,7 +6,8 @@ open QCheck
    Helpers for building expr values
    ################################################ *)
 
-let expr_of_bool b = if b then True else False
+
+   let expr_of_bool b = if b then True else False
 
 let rec expr_of_nat = function
   | 0 -> Zero

@@ -11,14 +11,14 @@ rule read =
   | "false" { FALSE }
   | "(" { LPAREN }
   | ")" { RPAREN }
-  | "not" { NOT }
-  | "and" { AND }
-  | "or" { OR }    
   | "if" { IF }
   | "then" { THEN }
   | "else" { ELSE }
-  | "0" { ZERO }
-  | "succ" { SUCC }  
+  | "or" { OR }
+  | "and" { AND }
+  | "not" { NOT }
+  | "iszero" { ISZERO }
   | "pred" { PRED }
-  | "iszero" { ISZERO }    
+  | "succ" { SUCC }
+  | "0" { ZERO }
   | eof { EOF }

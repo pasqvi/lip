@@ -4,26 +4,28 @@ open Ast
 
 %token TRUE
 %token FALSE
-%token NOT
-%token AND
-%token OR
+%token LPAREN
+%token RPAREN
 %token IF
 %token THEN
 %token ELSE
-%token ZERO
-%token SUCC
-%token PRED
-%token ISZERO
-%token LPAREN
-%token RPAREN
 %token EOF
+%token OR
+%token AND
+%token NOT
+%token ZERO
+%token ISZERO
+%token PRED
+%token SUCC
+
 
 %nonassoc ELSE
 %left OR
-%left AND
-%left NOT
+%left AND 
+%left NOT 
+%left ISZERO
+%left PRED SUCC 
 
-%right SUCC, PRED, ISZERO
 
 %start <expr> prog
 
@@ -36,13 +38,13 @@ prog:
 expr:
   | TRUE { True }
   | FALSE { False }
-  | NOT; e=expr { Not(e) }
-  | e1=expr; AND; e2=expr { And(e1,e2) }
-  | e1=expr; OR; e2=expr { Or(e1,e2) }
   | IF; e1 = expr; THEN; e2 = expr; ELSE; e3 = expr; { If(e1, e2, e3) }
-  | ZERO { Zero }
-  | SUCC; e = expr { Succ(e) }
-  | PRED; e = expr { Pred(e) }
-  | ISZERO; e = expr { IsZero(e) }
   | LPAREN; e=expr; RPAREN {e}
+  | e1=expr; AND; e2=expr; { And(e1,e2) }  
+  | e1=expr; OR; e2=expr; { Or(e1,e2) }  
+  | NOT; e1= expr; { Not(e1)}
+  | ZERO { Zero }
+  | ISZERO; e1=expr; { IsZero(e1) }
+  | PRED; e1=expr;  { Pred(e1) }
+  | SUCC; e1=expr;  { Succ(e1) }
 ;

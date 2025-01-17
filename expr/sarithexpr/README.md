@@ -95,6 +95,7 @@ We're going to formally verify that your implementations of `trace1` and `typech
 
 First, install QCheck to your opam switch:
 ```
+
 opam install qcheck
 ```
 
