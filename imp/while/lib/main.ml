@@ -1,100 +1,83 @@
 open Ast
 open Types
 
-
+let bind st x v = fun y -> if x=y then v else st y
+let bottom= fun _ -> failwith "Errore"
 let parse (s : string) : cmd =
   let lexbuf = Lexing.from_string s in
   let ast = Parser.prog Lexer.read lexbuf in
   ast
 
+let rec eval_expr : state -> expr -> exprval = 
+fun st e -> match e with
+| True -> Bool true
+| False -> Bool false
+| Const n -> Nat n
+| Var v-> st v
+| And (e0, e1) -> (
+    match (eval_expr st e0, eval_expr st e1) with
+    | Bool e2, Bool e3 -> Bool (e2 && e3)
+    | _ -> failwith "Gli argomenti devono essere booleani")
+| Or (e0, e1) -> (
+    match (eval_expr st e0, eval_expr st e1) with
+    | Bool e2, Bool e3 -> Bool (e2 || e3)
+    | _ -> failwith "Gli argomenti devono essere booleani")
+| Not e0 -> (
+    match eval_expr st e0 with
+    | Bool e -> if e then Bool false else Bool true
+    | _ -> failwith "L' expr di un not deve essere un booleano")
+| Sub (e0, e1) -> (
+  match (eval_expr st e0, eval_expr st e1) with
+  | Nat e2, Nat e3 -> Nat (e2 - e3)
+  | _ -> failwith "Gli argomenti devono essere naturali")
+| Add (e0, e1) -> (
+  match (eval_expr st e0, eval_expr st e1) with
+  | Nat e2, Nat e3 -> Nat (e2 + e3)
+  | _ -> failwith "Gli argomenti devono essere naturali")
+| Mul (e0, e1) -> (
+  match (eval_expr st e0, eval_expr st e1) with
+  | Nat e2, Nat e3 -> Nat (e2 * e3)
+  | _ -> failwith "Gli argomenti devono essere naturali")
+| Eq (e0, e1) -> (
+  match (eval_expr st e0, eval_expr st e1) with
+  | Nat e2, Nat e3 -> if e2=e3 then Bool true else Bool false
+  | _ -> failwith "Gli argomenti devono essere naturali")
+| Leq (e0, e1) -> (
+  match (eval_expr st e0, eval_expr st e1) with
+  | Nat e2, Nat e3 -> if e2<=e3 then Bool true else Bool false
+  | _ -> failwith "Gli argomenti devono essere naturali")
 
-(******************************************************************************)
-(*                       Big-step semantics of expressions                    *)
-(******************************************************************************)
 
-let rec eval_expr st = function
-    True -> Bool true
-  | False -> Bool false
-  | Var x -> st x
-  | Const n -> Nat n
-  | Not(e) -> (match eval_expr st e with
-        Bool b -> Bool(not b)
-      | _ -> raise (TypeError "Not")
+  let rec trace1 : conf -> conf = function
+  | Cmd(Skip,st) -> St(st)
+  | Cmd(If(True,c1,_),st)-> Cmd(c1,st)
+  | Cmd(If(False, _, c2),st) -> Cmd(c2,st)
+  | Cmd(If(e,c1,c2),st) -> (
+     match eval_expr st e with 
+     | Bool b1-> if b1 then Cmd(c1,st) else Cmd(c2,st)
+     | _ -> failwith "Non sono ammessi nat" )
+  | Cmd (While (e, c), st) -> (
+    match eval_expr st e with
+    | Bool true -> Cmd (Seq (c, While (e, c)), st)
+    | Bool false -> St st
+    | _ -> failwith "Non sono ammessi nat" )
+  | Cmd(Assign(x,v),st)-> St (bind st x (eval_expr st v))
+  | Cmd(Seq(c1,c2),st) -> (
+    match trace1 (Cmd(c1,st)) with 
+    | Cmd(c1',st') -> Cmd(Seq(c1',c2),st')
+    | St st' -> Cmd(c2,st')
     )
-  | And(e1,e2) -> (match (eval_expr st e1,eval_expr st e2)  with
-        (Bool b1,Bool b2) -> Bool(b1 && b2)
-      | _ -> raise (TypeError "And")
-    )
-  | Or(e1,e2) -> (match (eval_expr st e1,eval_expr st e2)  with
-        (Bool b1,Bool b2) -> Bool(b1 || b2)
-      | _ -> raise (TypeError "Or")
-    )
-  | Add(e1,e2) -> (match (eval_expr st e1,eval_expr st e2)  with
-        (Nat n1,Nat n2) -> Nat(n1 + n2)
-      | _ -> raise (TypeError "Add")
-    )    
-  | Sub(e1,e2) -> (match (eval_expr st e1,eval_expr st e2)  with
-        (Nat n1,Nat n2) when n1>=n2 -> Nat(n1 - n2)
-      | _ -> raise (TypeError "Sub")
-    )
-  | Mul(e1,e2) -> (match (eval_expr st e1,eval_expr st e2)  with
-        (Nat n1,Nat n2) -> Nat(n1 * n2)
-      | _ -> raise (TypeError "Add")
-    )        
-  | Eq(e1,e2) -> (match (eval_expr st e1,eval_expr st e2)  with
-        (Nat n1,Nat n2) -> Bool(n1 = n2)
-      | _ -> raise (TypeError "Eq")
-    )    
-  | Leq(e1,e2) -> (match (eval_expr st e1,eval_expr st e2)  with
-        (Nat n1,Nat n2) -> Bool(n1 <= n2)
-      | _ -> raise (TypeError "Leq")
-    )          
-
-(******************************************************************************)
-(*                      Small-step semantics of commands                      *)
-(******************************************************************************)
+  | _ -> raise NoRuleApplies
   
-let bot = fun x -> raise (UnboundVar x)
-
-let bind f x v = fun y -> if y=x then v else f y
-
-let rec trace1 = function
-    St _ -> raise NoRuleApplies
-  | Cmd(c,st) -> match c with
-      Skip -> St st
-    | Assign(x,e) -> let v = eval_expr st e in St (bind st x v)
-    | Seq(c1,c2) -> (match trace1 (Cmd(c1,st)) with
-          St st1 -> Cmd(c2,st1)
-        | Cmd(c1',st1) -> Cmd(Seq(c1',c2),st1))
-    | If(e,c1,c2) -> (match eval_expr st e with
-          Bool true -> Cmd(c1,st)
-        | Bool false -> Cmd(c2,st)
-        | _ -> raise (TypeError "If"))
-    | While(e,c) ->  (match eval_expr st e with
-          Bool true -> Cmd(Seq(c,While(e,c)),st)
-        | Bool false -> St st
-        | _ -> raise (TypeError "While"))
-
-
-(**********************************************************************
- trace_rec : int-> conf -> conf list
-
- Usage: trace_rec n t performs n steps of the small-step semantics
-
- **********************************************************************)
-
-let rec trace_rec n t =
-  if n<=0 then [t]
-  else try
-      let t' = trace1 t
-      in t::(trace_rec (n-1) t')
-    with NoRuleApplies -> [t]
-
-(**********************************************************************
- trace : int -> cmd -> conf list
-
- Usage: trace n t performs n steps of the small-step semantics
- **********************************************************************)
-
-let trace n t = trace_rec n (Cmd(t,bot))
-
+let trace (n_steps : int) (c : cmd) : conf list= 
+ let conf0= Cmd(c,bottom) in 
+ let rec helper n conf = 
+  if n>0 then
+      (try
+      let conf' = trace1 conf in 
+      conf :: helper (n-1) conf'
+      with NoRuleApplies -> [ conf ])
+  else
+      [ conf ]
+  in
+  helper n_steps conf0

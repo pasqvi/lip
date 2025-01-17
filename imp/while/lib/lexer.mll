@@ -2,35 +2,33 @@
 open Parser
 }
 
-let white = [' ' '\n' '\t']+
-let letter = ['a'-'z' 'A'-'Z']
-let chr = ['a'-'z' 'A'-'Z' '0'-'9']
-let id = letter chr*
-let num = ['0'-'9']|['1'-'9']['0'-'9']*
+let white = [' ' '\t']+
+let const = ['0'-'9']['0'-'9']*
+let var = ['a'-'z']['a'-'z']*
 
 rule read =
   parse
   | white { read lexbuf }  
-  | "(" { LPAREN }
-  | ")" { RPAREN }
   | "true" { TRUE }
   | "false" { FALSE }
-  | "not" { NOT }
-  | "and" { AND }
-  | "or" { OR }
-  | "+" { PLUS }
-  | "-" { MINUS }
-  | "*" { MUL }  
-  | "=" { EQ }
-  | "<=" { LEQ }    
-  | "skip" { SKIP }
-  | ":="  { TAKES }
-  | ";"  { SEQ }  
+  | "(" { LPAREN }
+  | ")" { RPAREN }
   | "if" { IF }
   | "then" { THEN }
   | "else" { ELSE }
+  | "or" { OR }
+  | "and" { AND }
+  | "not" { NOT }
+  | "+" { ADD }
+  | "-" { SUB }
+  | "*" { MUL }
+  | "=" { EQ }
+  | "<=" { LEQ }
   | "while" { WHILE }
-  | "do" { DO }  
-  | id { ID (Lexing.lexeme lexbuf) }
-  | num { CONST (Lexing.lexeme lexbuf) }  
+  | "do" { DO }
+  | ":=" { ASSIGN }
+  | ";" { SEQ }
+  | "skip" { SKIP }
+  | const { CONST (Lexing.lexeme lexbuf) }
+  | var { VAR ( Lexing.lexeme lexbuf ) }
   | eof { EOF }
